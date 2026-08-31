@@ -163,4 +163,4 @@ See `TECHNICAL.md` for developer information and API documentation.
 
 ## Credits
 
-Investment Simulator - USYD COMP9001 Final Project
+Investment Simulator - Academic Project

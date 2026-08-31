@@ -2,9 +2,9 @@
                     INVESTMENT SIMULATOR - COMPLETION REPORT
 ================================================================================
 
-PROJECT: Investment Simulator - USYD COMP9001 Final Project
+PROJECT: Investment Simulator - Academic Project
 STATUS: ✅ COMPLETE AND TESTED
-DATE: September 1, 2026
+DATE: Project completion report
 
 ================================================================================
                               PROJECT OVERVIEW
@@ -379,7 +379,7 @@ DATA:
 ================================================================================
 
 Investment Simulator is a COMPLETE, TESTED, and DOCUMENTED project that fully
-meets the specifications outlined in the USYD COMP9001 final project assignment.
+meets the specifications outlined in the course assignment.
 
 The game demonstrates:
   ✓ Sound software architecture

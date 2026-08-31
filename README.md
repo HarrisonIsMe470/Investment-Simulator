@@ -55,4 +55,4 @@ python main.py
 
 ## Authors
 
-USYD COMP9001 Final Project
+Academic Project

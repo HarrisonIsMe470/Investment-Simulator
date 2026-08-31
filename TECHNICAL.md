@@ -315,4 +315,4 @@ Test coverage:
 
 ## License
 
-This project is created for educational purposes as part of USYD COMP9001.
+This project is created for educational purposes as part of an academic course.
