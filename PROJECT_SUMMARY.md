@@ -137,10 +137,6 @@
 │   │   └── data_models.py      # Game data structures
 │   └── utils/                  # Utilities
 │       └── config.py           # Configuration management
-└── assets/                     # (Placeholder for graphics/sounds)
-    ├── sprites/
-    ├── sounds/
-    └── fonts/
 ```
 
 ## Technologies Used

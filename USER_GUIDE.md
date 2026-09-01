@@ -56,9 +56,10 @@ You can **buy** or **sell** various investment assets:
    - ADA (Cardano)
 
 3. **Bonds** - Fixed income securities
-   - US10Y (10-Year US Treasury)
-   - AUDIT (Corporate Bonds)
-   - GOVT5Y (5-Year Government Bonds)
+   - USA3M (3-Month US Treasury)
+   - AUS3M (3-Month Australian Government Bond)
+   - GBR3M, JPN3M, DEU3M (3-Month UK, Japanese, and German Government Bonds)
+   - Bonds cannot be sold until 90 simulated days after purchase.
 
 4. **ETFs** - Exchange-traded funds
    - SPY (S&P 500)

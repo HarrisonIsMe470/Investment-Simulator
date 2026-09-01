@@ -208,11 +208,6 @@ data/:
   • game.db - SQLite database (created at runtime)
   • saves/ - Saved games directory (created at runtime)
 
-assets/:
-  • sprites/ - Graphics directory (placeholder)
-  • sounds/ - Audio directory (placeholder)
-  • fonts/ - Font files directory (placeholder)
-
 ================================================================================
                           KEY TECHNICAL FEATURES
 ================================================================================

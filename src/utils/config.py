@@ -22,14 +22,16 @@ class ConfigManager:
             "width": 1280,
             "height": 720,
             "fullscreen": False,
-            "ui_scale": 1.0
+            "ui_scale": 1.0,
+            "font_scale": 1.15
         },
         "features": {
             "enable_scams": True,
             "enable_ipo": True,
             "enable_crypto": True,
             "enable_options": True,
-            "enable_forex": True
+            "enable_forex": True,
+            "enable_live_news": True
         },
         "audio": {
             "master_volume": 0.5,

@@ -53,11 +53,27 @@ class DatabaseManager:
                 quantity REAL NOT NULL,
                 average_buy_price REAL NOT NULL,
                 current_price REAL NOT NULL,
+                opened_day INTEGER DEFAULT 1,
+                locked_until_day INTEGER DEFAULT 1,
+                expiry_day INTEGER DEFAULT 0,
+                strike REAL DEFAULT 0,
+                underlying TEXT DEFAULT '',
+                option_kind TEXT DEFAULT '',
+                multiplier INTEGER DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (player_id) REFERENCES players(id)
             )
         ''')
+        portfolio_columns = {row[1] for row in cursor.execute('PRAGMA table_info(portfolio)')}
+        for column, definition in {
+            "opened_day": "INTEGER DEFAULT 1", "locked_until_day": "INTEGER DEFAULT 1",
+            "expiry_day": "INTEGER DEFAULT 0", "strike": "REAL DEFAULT 0",
+            "underlying": "TEXT DEFAULT ''", "option_kind": "TEXT DEFAULT ''",
+            "multiplier": "INTEGER DEFAULT 1",
+        }.items():
+            if column not in portfolio_columns:
+                cursor.execute(f"ALTER TABLE portfolio ADD COLUMN {column} {definition}")
         
         # Transactions table
         cursor.execute('''
@@ -99,10 +115,32 @@ class DatabaseManager:
                 email_type TEXT NOT NULL,
                 game_day INTEGER NOT NULL,
                 read INTEGER DEFAULT 0,
+                source TEXT DEFAULT 'Investment Simulator',
+                url TEXT DEFAULT '',
+                published TEXT DEFAULT '',
+                market_impact TEXT DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (player_id) REFERENCES players(id)
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS game_states (
+                player_id INTEGER PRIMARY KEY,
+                state_json TEXT NOT NULL,
+                saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (player_id) REFERENCES players(id)
+            )
+        ''')
+        # Non-destructive migration for databases created by earlier builds.
+        email_columns = {row[1] for row in cursor.execute('PRAGMA table_info(emails)')}
+        for column, definition in {
+            "source": "TEXT DEFAULT 'Investment Simulator'",
+            "url": "TEXT DEFAULT ''",
+            "published": "TEXT DEFAULT ''",
+            "market_impact": "TEXT DEFAULT ''",
+        }.items():
+            if column not in email_columns:
+                cursor.execute(f"ALTER TABLE emails ADD COLUMN {column} {definition}")
         
         conn.commit()
         conn.close()
@@ -135,6 +173,27 @@ class DatabaseManager:
         if row:
             return dict(row)
         return None
+
+    def get_latest_player(self) -> Optional[Dict[str, Any]]:
+        """Return the most recently updated player save."""
+        with self.get_connection() as conn:
+            row = conn.execute('SELECT * FROM players ORDER BY updated_at DESC, id DESC LIMIT 1').fetchone()
+        return dict(row) if row else None
+
+    def save_game_state(self, player_id: int, state_json: str):
+        with self.get_connection() as conn:
+            conn.execute('''
+                INSERT INTO game_states (player_id, state_json, saved_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(player_id) DO UPDATE SET
+                    state_json = excluded.state_json, saved_at = CURRENT_TIMESTAMP
+            ''', (player_id, state_json))
+
+    def get_game_state(self, player_id: int) -> Optional[str]:
+        with self.get_connection() as conn:
+            row = conn.execute('SELECT state_json FROM game_states WHERE player_id = ?',
+                               (player_id,)).fetchone()
+        return row['state_json'] if row else None
     
     def update_player_balance(self, player_id: int, new_balance: float):
         """Update player's current balance."""
@@ -163,6 +222,31 @@ class DatabaseManager:
         
         conn.commit()
         conn.close()
+
+    def update_player_progress(self, player_id: int, balance: float, game_day: int,
+                               operations_today: int):
+        """Persist the player's complete lightweight game progress."""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE players SET current_balance = ?, game_day = ?,
+                operations_today = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (balance, game_day, operations_today, player_id))
+
+    def replace_portfolio(self, player_id: int, positions):
+        """Atomically replace persisted positions with the in-memory portfolio."""
+        with self.get_connection() as conn:
+            conn.execute('DELETE FROM portfolio WHERE player_id = ?', (player_id,))
+            conn.executemany('''
+                INSERT INTO portfolio
+                (player_id, asset_type, symbol, quantity, average_buy_price, current_price,
+                 opened_day, locked_until_day, expiry_day, strike, underlying, option_kind, multiplier)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', [
+                (player_id, p.asset_type, p.symbol, p.quantity,
+                 p.average_buy_price, p.current_price, p.opened_day, p.locked_until_day,
+                 p.expiry_day, p.strike, p.underlying, p.option_kind, p.multiplier) for p in positions
+            ])
     
     def get_game_day(self, player_id: int) -> int:
         """Get current game day."""
@@ -197,15 +281,19 @@ class DatabaseManager:
         
         return [dict(row) for row in rows]
     
-    def add_email(self, player_id: int, subject: str, content: str, email_type: str, game_day: int):
+    def add_email(self, player_id: int, subject: str, content: str, email_type: str,
+                  game_day: int, source: str = "Investment Simulator", url: str = "",
+                  published: str = "", market_impact: str = ""):
         """Add an email to player's inbox."""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO emails (player_id, subject, content, email_type, game_day)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (player_id, subject, content, email_type, game_day))
+            INSERT INTO emails
+            (player_id, subject, content, email_type, game_day, source, url, published, market_impact)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (player_id, subject, content, email_type, game_day, source, url,
+              published, market_impact))
         
         conn.commit()
         conn.close()

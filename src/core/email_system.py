@@ -4,6 +4,7 @@ Email and notification system for Investment Simulator
 
 import random
 from typing import List
+from .news_service import LiveNewsService
 from dataclasses import dataclass
 from enum import Enum
 
@@ -15,6 +16,7 @@ class EmailType(Enum):
     SCAM = "scam"
     REPORT = "report"
     IPO = "ipo"
+    OFFER = "offer"
 
 
 @dataclass
@@ -25,6 +27,17 @@ class Email:
     email_type: EmailType
     game_day: int
     read: bool = False
+    source: str = "Investment Simulator"
+    url: str = ""
+    published: str = ""
+    market_impact: str = ""
+    interactive: bool = False
+    offer_kind: str = ""
+    stake: float = 0.0
+    accepted: bool = False
+    resolved: bool = False
+    resolve_day: int = 0
+    payout_multiplier: float = 0.0
 
 
 class EmailSystem:
@@ -33,6 +46,8 @@ class EmailSystem:
     def __init__(self):
         """Initialize email system."""
         self.emails: List[Email] = []
+        self.live_news = LiveNewsService()
+        self.live_cursor = 0
         
         # Email templates
         self.news_headlines = [
@@ -82,14 +97,24 @@ class EmailSystem:
         """Generate random emails for a game day."""
         emails_today = []
         
-        # Always get financial news
-        subject = random.choice(self.news_headlines)
-        content = f"Market Update (Day {game_day}): {subject}. Investors are closely monitoring market trends and economic indicators."
+        # Prefer a real attributed headline when the background RSS refresh has
+        # completed; retain simulated news as an offline-safe fallback.
+        live_articles = self.live_news.snapshot()
+        if live_articles:
+            article = live_articles[self.live_cursor % len(live_articles)]
+            self.live_cursor += 1
+            subject = article.title
+            content = article.summary or "Open the source link for the full report."
+            source, url, published = article.source, article.url, article.published
+        else:
+            subject = random.choice(self.news_headlines)
+            content = f"Market Update (Day {game_day}): {subject}. Investors are closely monitoring market trends and economic indicators."
+            source, url, published = "Simulated News Desk", "", ""
         emails_today.append(Email(
             subject=subject,
             content=content,
             email_type=EmailType.NEWS,
-            game_day=game_day
+            game_day=game_day, source=source, url=url, published=published
         ))
         
         # 25% chance of additional news
@@ -103,34 +128,23 @@ class EmailSystem:
                 game_day=game_day
             ))
         
-        # 25% chance of advertisement (mostly legitimate)
+        # Opportunities and scams are deliberately indistinguishable until the
+        # player accepts; suspicious wording is the only clue.
         if random.random() < 0.25:
-            subject, content = random.choice(self.advertisements)
+            is_scam = random.random() < 0.35
+            pool = self.scams if is_scam else self.advertisements
+            subject, content = random.choice(pool)
             emails_today.append(Email(
                 subject=subject,
                 content=content,
-                email_type=EmailType.ADVERTISEMENT,
-                game_day=game_day
-            ))
-        
-        # 8% chance of scam (beware!)
-        if random.random() < 0.08:
-            subject, content = random.choice(self.scams)
-            emails_today.append(Email(
-                subject=subject,
-                content=f"⚠️ WARNING: This email appears to be a scam. {content}",
-                email_type=EmailType.SCAM,
-                game_day=game_day
-            ))
-        
-        # 12% chance of IPO announcement
-        if random.random() < 0.12:
-            subject, content = random.choice(self.ipo_announcements)
-            emails_today.append(Email(
-                subject=subject,
-                content=content,
-                email_type=EmailType.IPO,
-                game_day=game_day
+                email_type=EmailType.OFFER,
+                game_day=game_day,
+                source="Private Investment Offer",
+                interactive=True,
+                offer_kind="scam" if is_scam else "opportunity",
+                stake=random.choice([250.0, 500.0, 1000.0]),
+                resolve_day=game_day + random.randint(3, 8),
+                payout_multiplier=0.0 if is_scam else random.uniform(1.08, 1.65),
             ))
         
         # Portfolio report every 7 days
@@ -170,6 +184,10 @@ class EmailSystem:
     def get_unread(self) -> List[Email]:
         """Get all unread emails."""
         return [e for e in self.emails if not e.read]
+
+    def get_all(self) -> List[Email]:
+        """Return the inbox without hiding messages already opened."""
+        return list(self.emails)
     
     def mark_as_read(self, email: Email):
         """Mark an email as read."""

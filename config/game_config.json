@@ -1,7 +1,30 @@
 {
-  "game_speed": "normal",
-  "difficulty": "normal",
-  "enable_scams": true,
-  "sound_enabled": false,
-  "ui_scale": 1.0
+  "game": {
+    "difficulty": "normal",
+    "game_speed": "normal",
+    "starting_balance": 10000,
+    "game_days": 365,
+    "max_operations_per_day": 2
+  },
+  "ui": {
+    "width": 1280,
+    "height": 720,
+    "fullscreen": false,
+    "ui_scale": 1.0,
+    "font_scale": 1.15
+  },
+  "features": {
+    "enable_scams": true,
+    "enable_ipo": true,
+    "enable_crypto": true,
+    "enable_options": true,
+    "enable_forex": true,
+    "enable_live_news": true
+  },
+  "audio": {
+    "sound_enabled": false
+  },
+  "graphics": {
+    "pixel_art_mode": true
+  }
 }
