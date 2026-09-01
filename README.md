@@ -1,5 +1,23 @@
 # Investment Simulator
 
+## External Libraries and Special Application Features
+
+This program uses the following modules or application features covered by the
+project disclosure requirements:
+
+| Module or feature | Category | Usage |
+|---|---|---|
+| `pygame` | Third-party library; graphics and GUI | Creates the application window, screens, controls, text, animations, dialogs, and other rendered interface elements. |
+| `urllib.request` | Web and networking | Sends optional HTTPS requests for RSS news and Alpaca stock quotes. |
+| `urllib.parse` | Web and networking | Builds the query string used by the optional Alpaca quote request. |
+| `xml.etree.ElementTree` | Web-data processing | Parses XML returned by the RSS news feeds. |
+| Audio/video processing | Not used | The program does not load, record, play, or process audio or video. |
+
+`pygame` is the only library used outside Python's standard library. The web
+features use Python's built-in modules and have offline fallbacks, so network
+access is not required to run the game. NumPy, Pillow, Matplotlib, Requests, and
+other third-party graphics or networking libraries are not used.
+
 Investment Simulator is a one-year portfolio management game built with Python
 and Pygame. The player starts with $10,000, may perform at most two operations
 per simulated day, and tries to finish day 365 with the highest possible net
@@ -103,27 +121,113 @@ used, market prices, market conditions, listed IPOs, and interactive-offer state
 4. Evaluate news, risk, liquidity, and time to expiration.
 5. Maximize total net assets: cash plus the current value of all positions.
 
-## Installation
+## Beginner Setup and Running Guide
 
-Python 3 and pip are required.
+No knowledge of the project is required. Follow these steps in order.
+
+### 1. Install Python
+
+Install Python 3 from [python.org](https://www.python.org/downloads/) if it is
+not already installed. On Windows, select **Add Python to PATH** during the
+installation.
+
+Open Terminal on macOS/Linux or PowerShell on Windows and check the installation:
+
+```bash
+python3 --version
+```
+
+On Windows, use the following command if `python3` is not recognized:
+
+```powershell
+python --version
+```
+
+### 2. Open the project directory
+
+Download or copy the project to your computer. In Terminal or PowerShell, use
+`cd` to enter the folder containing `main.py`. For example:
+
+```bash
+cd path/to/Investment-Simulator
+```
+
+All remaining commands must be run from this directory.
+
+### 3. Create a virtual environment
+
+A virtual environment keeps this project's package separate from other Python
+projects.
+
+macOS or Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+After activation, the terminal normally displays `(.venv)` before the prompt.
+
+### 4. Install the required library
+
+macOS or Linux:
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-## Running
+Windows:
 
-Run commands from the project root:
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Only Pygame is installed. The database, JSON configuration, RSS reader, and HTTP
+client use modules included with Python.
+
+### 5. Start the graphical game
+
+macOS or Linux:
 
 ```bash
 python3 main.py
 ```
 
-The optional terminal version can be started with:
+Windows:
+
+```powershell
+python main.py
+```
+
+The game opens at its main menu. Select **START NEW RUN** to begin or **CONTINUE** to
+restore the latest saved game. The SQLite save database is created automatically
+in `data/game.db`.
+
+Internet access is optional. Without it, the game uses simulated news and order
+book data. No API keys are required for normal play.
+
+### Optional terminal version
+
+To run the text interface instead of the Pygame window:
 
 ```bash
 python3 cli_game.py
 ```
+
+Windows users can replace `python3` with `python`.
+
+### Closing and returning later
+
+Use **SAVE GAME** before closing if you want an explicit checkpoint. The game
+also persists state after important actions. When returning, activate `.venv`
+again, run `main.py`, and select **CONTINUE**.
 
 ## Configuration
 
