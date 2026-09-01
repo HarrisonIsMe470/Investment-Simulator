@@ -18,6 +18,33 @@ features use Python's built-in modules and have offline fallbacks, so network
 access is not required to run the game. NumPy, Pillow, Matplotlib, Requests, and
 other third-party graphics or networking libraries are not used.
 
+## Setup and Run
+
+From the project root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+python3 main.py
+```
+
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` and use
+`python` if `python3` is unavailable.
+
+Optional commands:
+
+```bash
+# Terminal interface
+python3 cli_game.py
+
+# Headless test suite (requires pytest)
+SDL_VIDEODRIVER=dummy python3 -m pytest -q
+```
+
+Runtime settings are in `config/game_config.json`. Network access and Alpaca
+credentials are optional; offline fallbacks are enabled by default.
+
 Investment Simulator is a one-year portfolio management game built with Python
 and Pygame. The player starts with $10,000, may perform at most two operations
 per simulated day, and tries to finish day 365 with the highest possible net
@@ -120,33 +147,6 @@ used, market prices, market conditions, listed IPOs, and interactive-offer state
 3. Advance through 365 simulated days.
 4. Evaluate news, risk, liquidity, and time to expiration.
 5. Maximize total net assets: cash plus the current value of all positions.
-
-## Setup and Run
-
-From the project root:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-python3 main.py
-```
-
-On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` and use
-`python` if `python3` is unavailable.
-
-Optional commands:
-
-```bash
-# Terminal interface
-python3 cli_game.py
-
-# Headless test suite (requires pytest)
-SDL_VIDEODRIVER=dummy python3 -m pytest -q
-```
-
-Runtime settings are in `config/game_config.json`. Network access and Alpaca
-credentials are optional; offline fallbacks are enabled by default.
 
 ## Configuration
 
