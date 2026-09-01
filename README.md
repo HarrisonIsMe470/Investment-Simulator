@@ -1,5 +1,13 @@
 # Investment Simulator
 
+Investment Simulator is a one-year portfolio management game built with Python
+and Pygame. The player starts with $10,000, may perform at most two operations
+per simulated day, and tries to finish day 365 with the highest possible net
+assets.
+
+The market is a game simulation rather than a brokerage or trading platform.
+Prices react to seeded random movement, volatility, economic events, and news.
+
 ## External Libraries and Special Application Features
 
 This program uses the following modules or application features covered by the
@@ -44,14 +52,6 @@ SDL_VIDEODRIVER=dummy python3 -m pytest -q
 
 Runtime settings are in `config/game_config.json`. Network access and Alpaca
 credentials are optional; offline fallbacks are enabled by default.
-
-Investment Simulator is a one-year portfolio management game built with Python
-and Pygame. The player starts with $10,000, may perform at most two operations
-per simulated day, and tries to finish day 365 with the highest possible net
-assets.
-
-The market is a game simulation rather than a brokerage or trading platform.
-Prices react to seeded random movement, volatility, economic events, and news.
 
 ## Current Features
 
