@@ -131,6 +131,19 @@ class DatabaseManager:
                 FOREIGN KEY (player_id) REFERENCES players(id)
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS game_results (
+                id INTEGER PRIMARY KEY,
+                player_id INTEGER NOT NULL UNIQUE,
+                player_name TEXT NOT NULL,
+                initial_balance REAL NOT NULL,
+                final_balance REAL NOT NULL,
+                return_percent REAL NOT NULL,
+                completed_day INTEGER NOT NULL,
+                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (player_id) REFERENCES players(id)
+            )
+        ''')
         # Non-destructive migration for databases created by earlier builds.
         email_columns = {row[1] for row in cursor.execute('PRAGMA table_info(emails)')}
         for column, definition in {
@@ -194,6 +207,37 @@ class DatabaseManager:
             row = conn.execute('SELECT state_json FROM game_states WHERE player_id = ?',
                                (player_id,)).fetchone()
         return row['state_json'] if row else None
+
+    def record_game_result(self, player_id: int, player_name: str,
+                           initial_balance: float, final_balance: float,
+                           completed_day: int):
+        """Record one immutable leaderboard result for a completed run."""
+        return_percent = ((final_balance / initial_balance) - 1) * 100 if initial_balance else 0.0
+        with self.get_connection() as conn:
+            conn.execute('''
+                INSERT OR IGNORE INTO game_results
+                (player_id, player_name, initial_balance, final_balance,
+                 return_percent, completed_day)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (player_id, player_name, initial_balance, final_balance,
+                  return_percent, completed_day))
+
+    def get_game_results(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Return completed runs ranked by final assets, then completion time."""
+        with self.get_connection() as conn:
+            rows = conn.execute('''
+                SELECT * FROM game_results
+                ORDER BY final_balance DESC, completed_at ASC, id ASC
+                LIMIT ?
+            ''', (limit,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_game_result(self, player_id: int) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            row = conn.execute(
+                'SELECT * FROM game_results WHERE player_id = ?', (player_id,)
+            ).fetchone()
+        return dict(row) if row else None
     
     def update_player_balance(self, player_id: int, new_balance: float):
         """Update player's current balance."""

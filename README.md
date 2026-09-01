@@ -125,6 +125,24 @@ export ALPACA_API_SECRET_KEY="your-secret-key"
 python3 main.py
 ```
 
+### Game over and rankings
+
+Closing the final day opens a dedicated game-over report containing:
+
+- Final net assets
+- Total profit or loss
+- Percentage return for the completed run
+- The run's position in the all-time ranking
+
+Each completed run is written once to the SQLite `game_results` table. The
+persistent ranking dashboard orders runs by final net assets and displays the
+player name, return, completion day, and completion time. It is available from
+both the main menu and the game-over screen. The current run is highlighted,
+and players can start a fresh run without deleting earlier results.
+
+Only completed runs enter the ranking; unfinished saves remain available through
+`CONTINUE` but are not treated as final results.
+
 ### Interface and persistence
 
 - Metro-inspired financial dashboard at a default resolution of 1280 x 720
@@ -135,10 +153,15 @@ python3 main.py
 - Editable keyboard quantity fields in buy and sell dialogs
 - Automatic persistence after state-changing actions
 - Manual `SAVE GAME` control and `CONTINUE` from the main menu
-- SQLite storage for players, positions, transactions, emails, and game state
+- A final game-over report with net assets, profit/loss, return, and rank
+- A persistent ranking dashboard containing every completed game run
+- SQLite storage for players, positions, transactions, emails, game state, and
+  completed-run rankings
 
 Saved state includes cash, holdings, contract metadata, current day, operations
 used, market prices, market conditions, listed IPOs, and interactive-offer state.
+Starting a new run resets the active market, inbox, portfolio, and daily state
+without removing results from previous completed runs.
 
 ## Game Rules
 

@@ -38,12 +38,14 @@ class MenuScreen(Screen):
         button_y = height // 2 + 20
         self.new_game_btn = Button(width // 2 - 150, button_y, 300, 52, "START NEW RUN")
         self.load_game_btn = Button(width // 2 - 150, button_y + 66, 300, 52, "CONTINUE")
-        self.quit_btn = Button(width // 2 - 150, button_y + 132, 300, 52, "EXIT")
+        self.ranking_btn = Button(width // 2 - 150, button_y + 132, 300, 52, "RANKINGS")
+        self.quit_btn = Button(width // 2 - 150, button_y + 198, 300, 52, "EXIT")
         self.load_game_btn.color = Colors.LIGHT_GRAY
+        self.ranking_btn.color = Colors.MAGENTA
         self.quit_btn.color = Colors.SURFACE_ALT
         self.quit_btn.text_color = Colors.MUTED
         
-        self.buttons = [self.new_game_btn, self.load_game_btn, self.quit_btn]
+        self.buttons = [self.new_game_btn, self.load_game_btn, self.ranking_btn, self.quit_btn]
         self.status_message = ""
         self.animation_time = 0.0
     
@@ -57,7 +59,11 @@ class MenuScreen(Screen):
                     return "trading"
                 elif button == self.load_game_btn:
                     success, self.status_message = self.game.load_latest_game()
-                    return "trading" if success else None
+                    if success:
+                        return "game_over" if self.game.state == GameState.END_GAME else "trading"
+                    return None
+                elif button == self.ranking_btn:
+                    return "rankings"
                 elif button == self.quit_btn:
                     return "quit"
         
@@ -219,6 +225,8 @@ class TradingScreen(Screen):
             self._ensure_game_started()
             _, self.status_message = self.game.advance_day()
             self.market_flash = 1.0
+            if self.game.state == GameState.END_GAME:
+                return "game_over"
         elif self.portfolio_btn.handle_event(event):
             return "portfolio"
         elif self.save_btn.handle_event(event):
@@ -527,4 +535,132 @@ class PortfolioScreen(Screen):
                 pygame.draw.line(self.surface, (27, 38, 57), (40, y_pos + 28), (self.width - 40, y_pos + 28))
                 y_pos += 42
 
+        return self.surface
+
+
+class RankingScreen(Screen):
+    """Persistent leaderboard containing every completed run."""
+
+    def __init__(self, width: int, height: int, game: Game):
+        super().__init__(width, height)
+        self.game = game
+        self.back_btn = Button(36, 34, 120, 42, "BACK")
+        self.new_run_btn = Button(width - 196, 34, 160, 42, "NEW RUN")
+        self.new_run_btn.color = Colors.GREEN
+        self.animation_time = 0.0
+
+    def handle_event(self, event: pygame.event.EventType) -> Optional[str]:
+        if self.back_btn.handle_event(event):
+            return "menu"
+        if self.new_run_btn.handle_event(event):
+            self.game.start_new_game("Player")
+            return "trading"
+        return None
+
+    def update(self, dt: float):
+        self.animation_time += dt
+
+    def draw(self) -> pygame.Surface:
+        self.surface.fill(Colors.BLACK)
+        scan_y = int((self.animation_time * 34) % self.height)
+        pygame.draw.line(self.surface, (18, 31, 49), (0, scan_y), (self.width, scan_y), 2)
+        header = Panel(20, 18, self.width - 40, 74)
+        header.draw(self.surface)
+        draw_label(self.surface, "RUN RANKINGS", 180, 39, Colors.WHITE, 23, True)
+        self.back_btn.draw(self.surface, ui_font(11, True))
+        self.new_run_btn.draw(self.surface, ui_font(11, True))
+
+        board = Panel(20, 112, self.width - 40, self.height - 132)
+        board.draw(self.surface)
+        columns = [("RANK", 48), ("PLAYER", 145), ("FINAL ASSETS", 430),
+                   ("RETURN", 690), ("DAY", 875), ("COMPLETED", 990)]
+        for label, x in columns:
+            draw_label(self.surface, label, x, 142, Colors.MUTED, 11, True)
+        pygame.draw.line(self.surface, Colors.BORDER, (40, 169), (self.width - 40, 169))
+
+        results = self.game.get_rankings(10)
+        if not results:
+            draw_label(self.surface, "No completed runs yet.", 48, 205, Colors.MUTED, 15)
+            draw_label(self.surface, "Finish day 365 to enter the rankings.", 48, 236, Colors.MUTED, 11)
+        for index, result in enumerate(results, 1):
+            y = 190 + (index - 1) * 47
+            is_current = result["player_id"] == self.game.player_id
+            if is_current:
+                pygame.draw.rect(self.surface, Colors.SURFACE_ALT,
+                                 (36, y - 9, self.width - 72, 38), border_radius=4)
+            return_color = Colors.GREEN if result["return_percent"] >= 0 else Colors.RED
+            values = [
+                (f"#{index}", 48, Colors.YELLOW if index <= 3 else Colors.WHITE),
+                (result["player_name"], 145, Colors.CYAN if is_current else Colors.WHITE),
+                (f"${result['final_balance']:,.2f}", 430, Colors.WHITE),
+                (f"{result['return_percent']:+.2f}%", 690, return_color),
+                (str(result["completed_day"]), 875, Colors.MUTED),
+                (str(result["completed_at"])[:16], 990, Colors.MUTED),
+            ]
+            for value, x, color in values:
+                draw_label(self.surface, value, x, y, color, 12, is_current and x == 145)
+        return self.surface
+
+
+class GameOverScreen(Screen):
+    """Final run summary shown after the last simulated day."""
+
+    def __init__(self, width: int, height: int, game: Game):
+        super().__init__(width, height)
+        self.game = game
+        self.rankings_btn = Button(width // 2 - 250, 560, 230, 50, "VIEW RANKINGS")
+        self.rankings_btn.color = Colors.MAGENTA
+        self.new_run_btn = Button(width // 2 + 20, 560, 230, 50, "START NEW RUN")
+        self.new_run_btn.color = Colors.GREEN
+        self.menu_btn = Button(width // 2 - 115, 630, 230, 42, "MAIN MENU")
+        self.menu_btn.color = Colors.LIGHT_GRAY
+        self.animation_time = 0.0
+
+    def handle_event(self, event: pygame.event.EventType) -> Optional[str]:
+        if self.rankings_btn.handle_event(event):
+            return "rankings"
+        if self.new_run_btn.handle_event(event):
+            self.game.start_new_game("Player")
+            return "trading"
+        if self.menu_btn.handle_event(event):
+            return "menu"
+        return None
+
+    def update(self, dt: float):
+        self.animation_time += dt
+
+    def draw(self) -> pygame.Surface:
+        self.surface.fill(Colors.BLACK)
+        for x in range(0, self.width, 40):
+            pygame.draw.line(self.surface, (10, 17, 29), (x, 0), (x, self.height))
+        summary = self.game.get_game_summary()
+        portfolio = summary["portfolio"]
+        final_value = portfolio["total_value"]
+        gain = final_value - self.game.STARTING_BALANCE
+        return_percent = (gain / self.game.STARTING_BALANCE) * 100
+        rank = self.game.get_current_rank()
+
+        pulse = int(18 * (1 + math.sin(self.animation_time * 2.5)) / 2)
+        title_color = tuple(min(255, c + pulse) for c in Colors.CYAN)
+        title = ui_font(46, True).render("SIMULATION COMPLETE", True, title_color)
+        self.surface.blit(title, title.get_rect(center=(self.width // 2, 105)))
+        draw_label(self.surface, "365-DAY FINAL REPORT", self.width // 2 - 105, 165,
+                   Colors.MUTED, 14, True)
+
+        card = Panel(self.width // 2 - 330, 215, 660, 285)
+        card.draw(self.surface)
+        metrics = [
+            ("FINAL NET ASSETS", f"${final_value:,.2f}", Colors.WHITE),
+            ("TOTAL PROFIT / LOSS", f"${gain:+,.2f}", Colors.GREEN if gain >= 0 else Colors.RED),
+            ("TOTAL RETURN", f"{return_percent:+.2f}%", Colors.GREEN if gain >= 0 else Colors.RED),
+            ("ALL-TIME RANK", f"#{rank}" if rank else "PENDING", Colors.YELLOW),
+        ]
+        for index, (label, value, color) in enumerate(metrics):
+            y = 245 + index * 58
+            draw_label(self.surface, label, self.width // 2 - 290, y, Colors.MUTED, 12, True)
+            value_surface = ui_font(21, True).render(value, True, color)
+            self.surface.blit(value_surface, value_surface.get_rect(right=self.width // 2 + 290, top=y - 4))
+
+        for button in (self.rankings_btn, self.new_run_btn, self.menu_btn):
+            button.draw(self.surface, ui_font(12, True))
         return self.surface

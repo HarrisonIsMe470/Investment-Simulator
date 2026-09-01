@@ -471,6 +471,44 @@ def test_ipo_lists_only_on_announced_listing_day():
     assert len(market.get_option_chain("NOVA", 15)) == 18
 
 
+def test_completed_runs_are_recorded_once_and_ranked():
+    with tempfile.TemporaryDirectory() as directory:
+        db_path = os.path.join(directory, "rankings.db")
+        game = Game(db_path=db_path, seed=2)
+        game.config.setdefault("features", {})["enable_live_news"] = False
+        game.start_new_game("First")
+        game.current_day = game.GAME_DAYS
+        game.portfolio.cash = 12000
+        assert game.advance_day()[0]
+        assert game.state.value == "end_game"
+        assert game.get_current_rank() == 1
+        # Re-entering the terminal condition must not duplicate the run.
+        game.advance_day()
+        assert len(game.get_rankings()) == 1
+
+        game.start_new_game("Second")
+        game.current_day = game.GAME_DAYS
+        game.portfolio.cash = 15000
+        game.advance_day()
+        results = game.get_rankings()
+        assert [row["player_name"] for row in results] == ["Second", "First"]
+        assert game.get_current_rank() == 1
+
+
+def test_game_over_and_ranking_screens_render():
+    pygame.init()
+    from ui.screens import GameOverScreen, RankingScreen
+    with tempfile.TemporaryDirectory() as directory:
+        game = Game(db_path=os.path.join(directory, "screens.db"), seed=3)
+        game.config.setdefault("features", {})["enable_live_news"] = False
+        game.start_new_game("Screen Test")
+        game.current_day = game.GAME_DAYS
+        game.advance_day()
+        assert GameOverScreen(1280, 720, game).draw().get_size() == (1280, 720)
+        assert RankingScreen(1280, 720, game).draw().get_size() == (1280, 720)
+    pygame.quit()
+
+
 if __name__ == "__main__":
     try:
         test_portfolio()

@@ -35,6 +35,7 @@ class Game:
     def __init__(self, db_path: str = "data/game.db", seed: int = None):
         """Initialize the game."""
         self.db = DatabaseManager(db_path)
+        self.seed = seed
         self.market = MarketSimulator(seed)
         self.email_system = EmailSystem()
         self.portfolio: Optional[Portfolio] = None
@@ -76,11 +77,14 @@ class Game:
     
     def start_new_game(self, player_name: str) -> int:
         """Start a new game and return player ID."""
+        self.market = MarketSimulator(self.seed)
+        self.email_system = EmailSystem()
         self.player_id = self.db.create_player(player_name, self.STARTING_BALANCE)
         self.portfolio = Portfolio(self.STARTING_BALANCE)
         self.current_day = 1
         self.operations_today = 0
         self.state = GameState.PLAYING
+        self.last_risk_events = []
         if self.config.get("features", {}).get("enable_live_news", True):
             self.email_system.live_news.refresh_async()
         
@@ -130,7 +134,8 @@ class Game:
                 row.get('source') or "Investment Simulator", row.get('url') or "",
                 row.get('published') or "", row.get('market_impact') or ""
             ))
-        self.state = GameState.PLAYING
+        self.state = (GameState.END_GAME if self.db.get_game_result(player_id)
+                      else GameState.PLAYING)
         raw_state = self.db.get_game_state(player_id)
         if raw_state:
             try:
@@ -191,6 +196,7 @@ class Game:
         """
         if self.current_day >= self.GAME_DAYS:
             self.state = GameState.END_GAME
+            self._record_game_result()
             self._persist_state()
             return True, f"Game ended! Final balance: ${self.portfolio.get_total_value():.2f}"
         
@@ -247,6 +253,30 @@ class Game:
         if self.last_risk_events:
             message += f" — {len(self.last_risk_events)} option position(s) closed"
         return True, message
+
+    def _record_game_result(self):
+        """Store the current run once when it reaches the terminal state."""
+        if self.player_id is None or self.portfolio is None:
+            return
+        player = self.db.get_player(self.player_id)
+        self.db.record_game_result(
+            self.player_id,
+            player["name"] if player else "Player",
+            self.portfolio.initial_balance,
+            self.portfolio.get_total_value(),
+            self.current_day,
+        )
+
+    def get_rankings(self, limit: int = 100) -> List[Dict]:
+        return self.db.get_game_results(limit)
+
+    def get_current_rank(self) -> Optional[int]:
+        if self.player_id is None:
+            return None
+        for rank, result in enumerate(self.db.get_game_results(100000), 1):
+            if result["player_id"] == self.player_id:
+                return rank
+        return None
     
     def can_trade(self) -> Tuple[bool, str]:
         """Check if player can perform a trade today."""

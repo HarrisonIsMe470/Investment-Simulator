@@ -13,7 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 import pygame
 from core.game import Game
 from ui.ui_manager import UIManager
-from ui.screens import MenuScreen, TradingScreen, PortfolioScreen
+from ui.screens import (MenuScreen, TradingScreen, PortfolioScreen,
+                        RankingScreen, GameOverScreen)
 from utils.config import ConfigManager
 
 
@@ -34,10 +35,14 @@ def main():
     menu_screen = MenuScreen(ui_width, ui_height, game)
     trading_screen = TradingScreen(ui_width, ui_height, game)
     portfolio_screen = PortfolioScreen(ui_width, ui_height, game)
+    ranking_screen = RankingScreen(ui_width, ui_height, game)
+    game_over_screen = GameOverScreen(ui_width, ui_height, game)
     
     ui_manager.register_screen("menu", menu_screen)
     ui_manager.register_screen("trading", trading_screen)
     ui_manager.register_screen("portfolio", portfolio_screen)
+    ui_manager.register_screen("rankings", ranking_screen)
+    ui_manager.register_screen("game_over", game_over_screen)
     
     # Start with menu
     ui_manager.set_screen("menu")
